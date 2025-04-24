@@ -1,0 +1,230 @@
+# utils.py
+import requests
+import feedparser
+import re
+import datetime
+import config  # 导入 config.py
+import schedule
+import time
+import hashlib  # 用于生成消息 ID
+from datetime import timezone, timedelta
+import random  # 用于生成随机时间
+
+
+# 用于存储已发送消息 ID 的集合
+sent_message_ids = set()
+
+# 获取当前系统时间
+now = datetime.datetime.now(timezone.utc)  # 获取带时区的当前时间
+# 将起始日期设置为昨天的日期
+start_date = now - datetime.timedelta(days=1)
+
+# 定义 UTC+8 时区
+utc_8 = timezone(timedelta(hours=8))
+
+
+def generate_message_id(entry):
+    """根据条目内容生成唯一 ID"""
+    # 优先使用条目的唯一 ID
+    if hasattr(entry, 'id'):
+        return entry.id
+
+    # 如果没有唯一 ID，则使用链接作为 ID
+    if hasattr(entry, 'link'):
+        return entry.link
+
+    # 如果以上两种方法都不可行，则结合多个字段生成 ID
+    content = entry.title + entry.description + str(entry.published_parsed)
+    return hashlib.md5(content.encode('utf-8')).hexdigest()
+
+
+def send_forward_message(group_id, messages, news):
+    """使用转发消息接口发送消息"""
+    try:
+        api_url = f'{config.QQBOT_API_URL}/send_group_forward_msg'  # 替换成你的转发消息接口地址
+
+        data = {
+            "group_id": group_id,
+            "messages": messages,
+            "news": news,
+            "prompt": "转发消息",
+            "summary": f"共{len(messages)}条消息",
+            "source": "来自TG群的消息"
+        }
+        response = requests.post(api_url, json=data)
+        response.raise_for_status()
+        result = response.json()
+
+        if result['status'] == 'ok':
+            print("消息转发成功")
+            return True
+        else:
+            print("消息转发失败:", result['message'])
+            return False
+    except Exception as e:
+        print("消息转发失败:", e)
+        return False
+
+
+def process_rss_feed(rss_feed):
+    """处理单个 RSS Feed"""
+    try:
+        # 计算每个群的随机时间范围
+        num_groups = len(config.RSS_FEEDS)
+        random_range = 2 * config.FETCH_INTERVAL / num_groups
+
+        # 在 0 到 random_range 分钟之间随机选择一个时间点
+        delay = random.uniform(0, random_range * 60)
+        print(f"等待 {delay:.2f} 秒后获取 {rss_feed['TG_GROUP_NAME']} 的 RSS 内容")  # 添加调试信息
+        time.sleep(delay)
+
+        # 使用 requests 库获取 RSS 内容
+        response = requests.get(rss_feed['RSS_URL'], headers={'User-Agent': 'Mozilla/5.0'}, timeout=10)
+        response.raise_for_status()
+        print(f"成功获取 {rss_feed['TG_GROUP_NAME']} 的 RSS 内容")  # 添加调试信息
+
+        # 使用 feedparser 解析 RSS 内容
+        feed = feedparser.parse(response.content)
+
+        new_messages = []
+        new_news = []
+
+        if feed.entries:  # 检查是否有条目
+            for entry in feed.entries:
+                # 获取发布时间
+                if hasattr(entry, 'published_parsed'):
+                    published_time = datetime.datetime(*entry.published_parsed[:6], tzinfo=timezone.utc)  # 显式指定时区为 UTC
+                    # 将 GMT 时间转换为 UTC+8 时间
+                    published_time = published_time.astimezone(utc_8)
+                else:
+                    print("时间获取失败，跳过该条消息")  # 添加调试信息
+                    continue
+
+                # 比较发布时间与起始日期
+                if published_time < start_date:
+                    print(f"消息发布时间{published_time}早于起始日期，跳过该频道")  # 添加调试信息
+                    break  # 提前跳出循环
+
+                # 生成消息 ID
+                message_id = generate_message_id(entry)
+
+                # 检查消息是否已发送
+                if message_id not in sent_message_ids:
+                    # 标记为已发送
+                    sent_message_ids.add(message_id)
+
+                    description = entry.description  # 获取 description 字段的内容
+
+                    # 提取图片链接
+                    image_links = re.findall(r'<img.*?src="(.*?)"', description)
+
+                    # 提取视频链接
+                    video_links = re.findall(r'<video.*?src="(.*?)"', description)
+
+                    # 去除 HTML 标签
+                    description = re.sub(r'<[^>]+>', '', description)
+
+                    # 格式化时间字符串
+                    time_str = published_time.strftime("%Y/%m/%d %H:%M")
+
+                    # 构建消息文本
+                    text = f"【来自tg群：{rss_feed['TG_GROUP_NAME']}】\n【{time_str}】\n----------------------------\n{description}"  # 使用 description 作为消息内容
+
+                    # 创建消息节点
+                    message_node = {
+                        "type": "node",
+                        "data": {
+                            "user_id": "菲比",  # 可以自定义
+                            "nickname": "菲比",  # 可以自定义
+                            "content": []
+                        }
+                    }
+
+                    # 添加文本消息片段
+                    text_message = {
+                        "type": "text",
+                        "data": {
+                            "text": text
+                        }
+                    }
+                    message_node["data"]["content"].append(text_message)
+
+                    # 添加图片消息片段
+                    for image_link in image_links:
+                        image_message = {
+                            "type": "image",
+                            "data": {
+                                "file": image_link,  # 图片文件 URL
+                                "url": image_link  # 图片在线 URL
+                            }
+                        }
+                        message_node["data"]["content"].append(image_message)
+
+                    # 添加视频消息片段
+                    for video_link in video_links:
+                        video_message = {
+                            "type": "video",
+                            "data": {
+                                "file": video_link,  # 视频文件 URL
+                                "url": video_link  # 图片在线 URL
+                            }
+                        }
+                        message_node["data"]["content"].append(video_message)
+
+                    new_messages.insert(0, message_node)  # 将消息插入到列表的开头
+
+                    # 构建外显文本
+                    if len(new_news) < 3:  # 只添加前三条消息的外显信息
+                        if image_links:
+                            news_text = "菲比：【图片】"
+                        elif video_links:
+                            news_text = "菲比：【视频】"
+                        else:
+                            news_text = f"菲比：{text}"
+                        new_news.append({"text": news_text})
+
+            # 对 news 列表进行倒序排列
+            new_news.reverse()
+
+            return new_messages, new_news
+
+        else:
+            print(f"{rss_feed['TG_GROUP_NAME']} 没有找到任何条目呢！")  # 添加调试信息
+            return [], []
+
+    except requests.exceptions.RequestException as e:
+        print(f"获取 {rss_feed['TG_GROUP_NAME']} 的 RSS 内容时发生网络请求错误:", e)  # 添加调试信息
+        return [], []
+    except Exception as e:
+        print(f"处理 {rss_feed['TG_GROUP_NAME']} 的 RSS 内容时发生错误:", e)  # 添加调试信息
+        return [], []
+
+
+def process_all_rss_feeds():
+    """处理所有 RSS Feed"""
+    print(f"开始处理所有 RSS Feed，当前时间：{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")  # 添加调试信息
+    all_messages = []
+    all_news = []
+
+    for rss_feed in config.RSS_FEEDS:
+        messages, news = process_rss_feed(rss_feed)
+        all_messages.extend(messages)
+        all_news.extend(news)
+
+    # 只保留 all_news 的前三条
+    all_news = all_news[:3]
+
+    if all_messages:
+        # 发送消息到 QQ 群
+        send_forward_message(config.GROUP_ID, all_messages, all_news)
+    else:
+        print("没有新消息呢！")  # 添加调试信息
+    print(f"处理 RSS Feed 结束，当前时间：{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")  # 添加调试信息
+
+
+def scheduled_task():
+    """定时执行的任务"""
+    process_all_rss_feeds()
+
+
+
