@@ -203,9 +203,11 @@ def process_rss_feed(rss_feed):
 def process_all_rss_feeds():
     """处理所有 RSS Feed"""
     print(f"开始处理所有 RSS Feed，当前时间：{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")  # 添加调试信息
+
     all_messages = []
     all_news = []
 
+    # 先处理所有的 RSS 源，生成消息列表
     for rss_feed in config.RSS_FEEDS:
         messages, news = process_rss_feed(rss_feed)
         all_messages.extend(messages)
@@ -214,17 +216,20 @@ def process_all_rss_feeds():
     # 只保留 all_news 的前三条
     all_news = all_news[:3]
 
-    if all_messages:
-        # 发送消息到 QQ 群
-        send_forward_message(config.GROUP_ID, all_messages, all_news)
-    else:
-        print("没有新消息呢！")  # 添加调试信息
-    print(f"处理 RSS Feed 结束，当前时间：{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")  # 添加调试信息
+    # 循环处理每个群聊，发送相同的消息列表
+    for group in config.GROUPS:
+        group_id = group['GROUP_ID']
+        group_name = group['GROUP_NAME']
 
+        if all_messages:
+            # 发送消息到 QQ 群
+            print(f"准备向 {group_name} 发送消息")  # 添加调试信息
+            send_forward_message(group_id, all_messages, all_news)
+        else:
+            print(f"{group_name} 没有新消息呢！")  # 添加调试信息
+
+    print(f"处理 RSS Feed 结束，当前时间：{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")  # 添加调试信息
 
 def scheduled_task():
     """定时执行的任务"""
     process_all_rss_feeds()
-
-
-
