@@ -1,7 +1,17 @@
 # config.py
 QQBOT_API_URL = 'http://' #Napcat HTTP服务器URL
-GROUP_ID = xxxx  # 群号
-
+# 定义一个群聊列表
+GROUPS = [
+    {
+        'GROUP_NAME': '群聊1',
+        'GROUP_ID': xxxxxxxx  # 群号
+    },
+    {
+        'GROUP_NAME': '群聊2',
+        'GROUP_ID': xxxxxxxx  # 群号
+    },
+    # 可以继续添加更多的群聊
+]
 # 定义一个 RSS 源列表
 RSS_FEEDS = [
     {
