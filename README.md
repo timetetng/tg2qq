@@ -2,11 +2,11 @@
 
 ## 简介
 
-这是一个小巧可爱的 Python 脚本，可以将 Telegram 频道的消息转发到 QQ 机器人（Napcat）。它通过 Napcat 的 HTTP 请求接口实现，支持订阅 Telegram 频道的文本、图片和视频，然后将它们转发到指定的 QQ 群里哦！
+这是一个小巧可爱的 Python 脚本，可以将 Telegram 频道的消息转发到 QQ 机器人（Napcat）。它通过 Napcat 的 HTTP 请求接口实现，支持订阅 Telegram 频道的文本、图片和视频(视频得看RSS源是否提供)，然后将它们转发到指定的 QQ 群里哦！
 
 ## 特点
 
-*   **简单易用**：配置简单，运行方便，像菲比一样好上手呢！
+*   **简单易用**：配置简单，运行方便！
 *   **多媒体支持**：支持转发文本、图片和视频消息，内容丰富多彩！
 *   **定时轮询**：可以设置定时轮询周期，自动获取最新消息并转发。
 *   **消息去重**：可以自动过滤已发送的消息，避免重复发送。
@@ -48,12 +48,12 @@ tg2qq/
     RSS_FEEDS = [
         {
             'TG_GROUP_NAME': 'Telegram 频道名称',
-            'RSS_URL': 'Telegram 频道 RSS 地址'
+            'RSS_URL': 'Telegram 频道 RSS 地址，如：https://rsshub.app/telegram/channel/频道id'
         },
         # 可以继续添加更多的频道
     ]
     # 抓取周期，单位为分钟
-    FETCH_INTERVAL = 1
+    FETCH_INTERVAL = 10
     ```
 
 4.  **运行 main.py**：在命令行中运行 `main.py` 启动脚本。
