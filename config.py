@@ -38,7 +38,7 @@ is_LLM = False
 req_interval = 3
 # 以gemini为例，若使用其他LLM服务商，修改下面API_KEY配置以及llm_utils.py调用代码即可
 # Gemini API Key
-API_KEY = "AIzaSyB-oxgQS9wL93OO0i4ULAq-jmq5Hsvnajs"
+API_KEY = "你的API_KEY"
 # 模型
 MODEL_NAME = 'models/gemini-2.0-flash'
 # 系统提示词，可根据需求调整，比如添加双语翻译
