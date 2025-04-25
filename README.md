@@ -57,7 +57,7 @@ tg2qq/
     # 抓取周期，单位为分钟
     FETCH_INTERVAL = 10
     # LLM 配置项（默认关闭）
-    Ls_LLM = False
+    is_LLM = False
     # 添加了 is_LLM、req_interval、API_KEY、MODEL_NAME 和 SYSTEM_PROMPT 的 LLM 相关配置项
     ```
     
