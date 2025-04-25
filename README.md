@@ -11,6 +11,7 @@
 *   **定时轮询**：可以设置定时轮询周期，自动获取最新消息并转发。
 *   **消息去重**：可以自动过滤已发送的消息，避免重复发送。
 *   **自定义消息格式**：可以自定义转发消息的格式，让消息更可爱！
+*   **支持LLM大模型**：可以自定义LLM大模型进行格式化、翻译、总结，让消息更人性化！
 
 ## 文件结构
 
@@ -18,6 +19,7 @@
 tg2qq/
 ├── config.py          # 配置文件
 ├── utils.py           # 主函数
+├── llm_utils.py       # LLM相关函数
 ├── main.py            # 主程序
 ├── requirements.txt   # 依赖文件
 └── README.md          # 就是这份说明文件啦！
@@ -54,8 +56,10 @@ tg2qq/
     ]
     # 抓取周期，单位为分钟
     FETCH_INTERVAL = 10
+    # LLM 配置项（默认关闭）
+    # 添加了 is_LLM、req_interval、API_KEY、MODEL_NAME 和 SYSTEM_PROMPT 的 LLM 相关配置项
     ```
-
+    
 4.  **运行 main.py**：在命令行中运行 `main.py` 启动脚本。
 
     ```bash
@@ -70,6 +74,7 @@ tg2qq/
     *   `TG_GROUP_NAME`: Telegram 频道的名称，用于在转发消息中显示。
     *   `RSS_URL`: Telegram 频道的 RSS 地址。
 *   `FETCH_INTERVAL`: 轮询周期，单位为分钟。脚本会每隔 `FETCH_INTERVAL` 分钟检查一次 Telegram 频道是否有新消息。
+*   `is_LLM`: LLM 开关，默认为 `False`。
 
 ## 使用说明
 
@@ -84,7 +89,7 @@ tg2qq/
 
 *   确保您的 QQ 机器人能够正常接收和发送消息。
 *   请勿滥用此脚本，遵守相关法律法规和平台规定。
-*   如果遇到问题，可以查看日志输出，或者向菲比提问哦！
+*   如果遇到问题，可以查看日志输出。
 
 ## 感谢
 
