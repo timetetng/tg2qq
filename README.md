@@ -93,7 +93,7 @@ tg2qq/
 1.  **获取 Telegram 频道 RSS 地址**：
     *   您可以使用第三方服务将 Telegram 频道转换为 RSS 源。例如，可以使用 RSSHub (推荐) 或者 TelegamToRss (可能需要魔法)。
 2.  **配置 QQ 机器人**：
-    *   确保您已经安装并配置好了 Napcat QQ 机器人，并且开启了 HTTP API 接口。
+    *   确保您已经安装并配置好了 Napcat QQ 机器人，并且开启了 HTTP 请求服务器端口。
 3.  **运行脚本**：
     *   配置好 `config.py` 文件后，运行 `main.py` 脚本，它会自动开始轮询 Telegram 频道并将消息转发到 QQ 群。
 
