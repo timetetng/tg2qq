@@ -3,13 +3,12 @@ import requests
 import feedparser
 import re
 import datetime
-import config  # 导入 config.py
+import config, llm_utils  # 导入 config.py和LLM模块
 import schedule
 import time
 import hashlib  # 用于生成消息 ID
 from datetime import timezone, timedelta
 import random  # 用于生成随机时间
-
 
 # 用于存储已发送消息 ID 的集合
 sent_message_ids = set()
@@ -90,19 +89,21 @@ def process_rss_feed(rss_feed):
         new_news = []
 
         if feed.entries:  # 检查是否有条目
+            print(f"{rss_feed['TG_GROUP_NAME']} 找到 {len(feed.entries)} 个条目")  # 添加调试信息
             for entry in feed.entries:
                 # 获取发布时间
                 if hasattr(entry, 'published_parsed'):
                     published_time = datetime.datetime(*entry.published_parsed[:6], tzinfo=timezone.utc)  # 显式指定时区为 UTC
                     # 将 GMT 时间转换为 UTC+8 时间
                     published_time = published_time.astimezone(utc_8)
+                    print(f"消息发布时间：{published_time}")  # 添加调试信息
                 else:
                     print("时间获取失败，跳过该条消息")  # 添加调试信息
                     continue
 
                 # 比较发布时间与起始日期
                 if published_time < start_date:
-                    print(f"消息发布时间{published_time}早于起始日期，跳过该频道")  # 添加调试信息
+                    print(f"消息发布时间{published_time}早于起始日期{start_date}，跳过该频道")  # 添加调试信息
                     break  # 提前跳出循环
 
                 # 生成消息 ID
@@ -203,32 +204,51 @@ def process_rss_feed(rss_feed):
 def process_all_rss_feeds():
     """处理所有 RSS Feed"""
     print(f"开始处理所有 RSS Feed，当前时间：{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")  # 添加调试信息
-
     all_messages = []
     all_news = []
-
     # 先处理所有的 RSS 源，生成消息列表
     for rss_feed in config.RSS_FEEDS:
         messages, news = process_rss_feed(rss_feed)
         all_messages.extend(messages)
         all_news.extend(news)
-
+        
+    if config.is_LLM:
+        all_messages = fix_messages_format(all_messages)
+    else:
+        print("LLM 已关闭，跳过消息格式修复")  # 调试信息
     # 只保留 all_news 的前三条
     all_news = all_news[:3]
-
     # 循环处理每个群聊，发送相同的消息列表
     for group in config.GROUPS:
         group_id = group['GROUP_ID']
         group_name = group['GROUP_NAME']
-
         if all_messages:
             # 发送消息到 QQ 群
-            print(f"准备向 {group_name} 发送消息")  # 添加调试信息
+            print(f"准备向 {group_name} 发送消息")  # 调试信息
             send_forward_message(group_id, all_messages, all_news)
         else:
-            print(f"{group_name} 没有新消息呢！")  # 添加调试信息
+            print(f"{group_name} 没有新消息呢！")  # 调试信息
+    print(f"处理 RSS Feed 结束，当前时间：{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")  # 调试信息
+    print("等待下一次轮询开始......")
+def fix_messages_format(messages):
+    """使用 LLM 修复消息列表中的文本格式"""
+    formatted_messages = []
+    for message in messages:
+        if message["type"] == "node":
+            print("处理消息节点")  # 调试信息
+            for content in message["data"]["content"]:
+                if content["type"] == "text":
+                    print("处理文本内容")  # 调试信息
+                    # 调用 LLM 修复文本格式
+                    try:
+                        time.sleep(config.req_interval)  # 添加 sleep，单位为秒，可以根据需要调整
+                        content["data"]["text"] = llm_utils.generate_gemini_response(content["data"]["text"])
+                        print("LLM处理成功")  # 调试信息
+                    except Exception as e:
+                        print(f"LLM处理失败: {e}")  # 调试信息
+        formatted_messages.append(message)  
+        return formatted_messages
 
-    print(f"处理 RSS Feed 结束，当前时间：{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")  # 添加调试信息
 
 def scheduled_task():
     """定时执行的任务"""
