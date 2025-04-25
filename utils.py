@@ -230,24 +230,26 @@ def process_all_rss_feeds():
             print(f"{group_name} 没有新消息呢！")  # 调试信息
     print(f"处理 RSS Feed 结束，当前时间：{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")  # 调试信息
     print("等待下一次轮询开始......")
+
+
 def fix_messages_format(messages):
     """使用 LLM 修复消息列表中的文本格式"""
     formatted_messages = []
     for message in messages:
         if message["type"] == "node":
-            print("处理消息节点")  # 调试信息
+            print("处理消息节点")  # 添加调试信息
             for content in message["data"]["content"]:
                 if content["type"] == "text":
-                    print("处理文本内容")  # 调试信息
+                    print("处理文本内容")  # 添加调试信息
                     # 调用 LLM 修复文本格式
                     try:
                         time.sleep(config.req_interval)  # 添加 sleep，单位为秒，可以根据需要调整
                         content["data"]["text"] = llm_utils.generate_gemini_response(content["data"]["text"])
-                        print("LLM处理成功")  # 调试信息
+                        print("LLM处理成功")  # 添加调试信息
                     except Exception as e:
-                        print(f"LLM处理失败: {e}")  # 调试信息
-        formatted_messages.append(message)  
-        return formatted_messages
+                        print(f"LLM处理失败: {e}")  # 添加调试信息
+        formatted_messages.append(message)
+    return formatted_messages
 
 
 def scheduled_task():
